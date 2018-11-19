@@ -40,6 +40,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
+#include <nav_msgs/Odometry.h>
 
 using namespace std;
 
@@ -52,6 +53,7 @@ public:
 
     ros::Publisher kf_publisher;
     ros::Publisher kf_stamped_publisher;
+    ros::Publisher Odom_pub;
     tf::TransformBroadcaster* br;
 
 public:
@@ -87,9 +89,10 @@ int main(int argc, char **argv)
     nh.param<std::string>("topic_rgb", topic_rgb, topic_rgb);
     nh.param<std::string>("topic_depth", topic_depth, topic_depth);
 
+
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::RGBD,true);
-    //ORB_SLAM2::System SLAM(strVocFile, strSettingsFile, ORB_SLAM2::System::RGBD, true);
+
 
     ImageGrabber igb(&SLAM, nh, &br);
 
@@ -195,7 +198,7 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
     transformCurrent.setOrigin(translation);
     transformCurrent.setRotation(tfqt);
 
-    br->sendTransform(tf::StampedTransform(transformCurrent, ros::Time::now(), "world", "orb_slam"));
+    br->sendTransform(tf::StampedTransform(transformCurrent, ros::Time::now(), "map", "base_link"));
 
     geometry_msgs::Pose kf_pose;
     tf::poseTFToMsg(transformCurrent, kf_pose);
@@ -203,7 +206,20 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const senso
 
     geometry_msgs::PoseStamped kf_pose_stamped;
     kf_pose_stamped.header.stamp = ros::Time::now();
-    kf_pose_stamped.header.frame_id = "world";
+
+    kf_pose_stamped.header.frame_id = "map";
     kf_pose_stamped.pose = kf_pose;
     kf_stamped_publisher.publish(kf_pose_stamped);
+
+
+
+    /*geometry_msgs::TransformStamped odom_trans;
+    odom_trans.header.stamp = ros::Time::now();
+    odom_trans.header.frame_id = "odom";
+    odom_trans.child_frame_id = "camera_link";
+    br->sendTransform(odom_trans);
+*/
+
+
+
 }
